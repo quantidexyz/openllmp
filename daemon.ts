@@ -154,6 +154,16 @@ const MintSetupTokenPayload = S.Struct({
   target_pubkey: Base64Blob,
 });
 const ReceiveSetupTokenPayload = S.Struct({ sealed: Base64Blob });
+/** A remote-Claude headless-login code submission: the X25519-sealed OAuth
+ *  authorization code the user pasted from the hosted callback page. Opened on
+ *  the target daemon and written to the waiting `claude auth login` stdin. The
+ *  code is single-use + PKCE-bound (useless without the daemon's in-process
+ *  verifier); sealed so the cloud relays it blind. See
+ *  `docs/proposals/headless-claude-login-paste-back.md`. */
+const SubmitLoginCodePayload = S.Struct({
+  slug: SubscriptionProviderSlug,
+  sealed: Base64Blob,
+});
 const SetAutoUpdatePayload = S.Struct({ enabled: S.Boolean });
 /** `refresh` scoped to one provider's usage cache; bare `{}` clears all. */
 const RefreshPayload = S.Struct({
@@ -237,6 +247,11 @@ const commandVariants = <F extends S.Struct.Fields>(addressing: F) =>
     }),
     S.Struct({
       ...addressing,
+      kind: S.Literal("submit_login_code"),
+      payload: SubmitLoginCodePayload,
+    }),
+    S.Struct({
+      ...addressing,
       kind: S.Literal("set_auto_update"),
       payload: SetAutoUpdatePayload,
     }),
@@ -311,7 +326,17 @@ export const DaemonProviderConnection = S.Struct({
    *  while a flow is pending; cleared the moment the credential lands. The
    *  card flips to Connected automatically on the next status push. */
   pending_auth: S.optional(
-    S.NullOr(S.Struct({ url: S.String, code: S.String })),
+    S.NullOr(
+      S.Struct({
+        url: S.String,
+        code: S.String,
+        /** `device_code` (codex/kimi: surface URL + one-time code to enter in
+         *  the browser, then poll) or `paste_code` (claude headless login:
+         *  surface URL, then a paste-back input for the code the hosted
+         *  callback page displays). Absent ⇒ `device_code`. */
+        mode: S.optional(S.Literal("device_code", "paste_code")),
+      }),
+    ),
   ),
   /** The daemon is downloading/installing this provider's isolated CLI right
    *  now. Pushed immediately when a `cli_install` command starts so the card

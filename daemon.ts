@@ -203,11 +203,6 @@ const commandVariants = <F extends S.Struct.Fields>(addressing: F) =>
     }),
     S.Struct({
       ...addressing,
-      kind: S.Literal("remove_setup_token"),
-      payload: ProviderPayload,
-    }),
-    S.Struct({
-      ...addressing,
       kind: S.Literal("cli_install"),
       payload: ProviderPayload,
     }),
@@ -291,11 +286,6 @@ export const DaemonProviderConnection = S.Struct({
   cli_version: S.optional(S.String),
   detail: S.optional(S.String),
   last_login_at_ms: S.optional(S.NullOr(S.Number)),
-  /** How this provider is authenticated on the daemon: the vendor CLI's
-   *  interactive `login`, or an on-box `setup_token` (claude_code). Drives
-   *  the dashboard's mode-aware disconnect (log out vs remove setup token).
-   *  Absent ⇒ treat as `login`. */
-  auth_mode: S.optional(S.Literal("login", "setup_token")),
   /** A LIVE device-code flow awaiting the user (codex/kimi on a remote box):
    *  the verification URL + one-time code to surface so the dashboard can
    *  render a synced "open this link, enter this code" panel. Present only

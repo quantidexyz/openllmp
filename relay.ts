@@ -2,16 +2,16 @@ import { Schema as S } from "effect";
 import { RelayCommandLifecycleFrame } from "./control-channel";
 import { DaemonCommand, DaemonCommandAck } from "./daemon";
 
-// ─── Daemon relay (push over a Sandbox WebSocket fed by Neon CDC) ─────
+// ─── Daemon relay (push over a Sandbox WebSocket, in-memory routing) ──
 //
-// Replaces the `GET /api/daemon/poll` long-poll transport with a
-// persistent WebSocket each end (daemon AND browser) holds to a relay
-// running in a Vercel Sandbox. The relay consumes Neon logical
-// replication off `daemon_commands` and pushes each new row down the
-// matching daemon socket; daemon acks + status fan out to the user's open
-// dashboards. The data model (one `sk-llm` key, `api_key_activity`,
-// `daemon_commands`) is unchanged — only the transport. See
-// `docs/proposals/daemon-relay-websocket-push.md`.
+// A persistent WebSocket each end (daemon AND browser) holds to a relay
+// running in a Vercel Sandbox. The relay routes commands IN MEMORY: a
+// watcher's `enqueue` is forwarded straight to the matching daemon socket
+// and the daemon's terminal `ack` rides back as a live `command_lifecycle`
+// frame — there is no `daemon_commands` mailbox and no Neon CDC. The one
+// durable write the relay keeps is `api_key_activity` presence/status, read
+// by the stateless `/v1/*` proxy + a cold dashboard load. See
+// `docs/proposals/daemon-owned-state-stateless-relay.md`.
 
 /** Which end a connect ticket authorizes. A `daemon` socket receives
  *  commands for its `key_id` and sends acks/status; a `watcher` socket

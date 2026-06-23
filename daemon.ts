@@ -252,6 +252,37 @@ export type TDaemonCommandBody = S.Schema.Type<typeof DaemonCommandBody>;
 /** Every kind in the closed vocabulary (the union's discriminants). */
 export type TDaemonCommandKind = TDaemonCommandBody["kind"];
 
+/** Runtime literal of the closed command vocabulary — the discriminant only,
+ *  no payload. Used by `control-channel.ts`'s `CommandLifecycle` to echo which
+ *  command a lifecycle frame is reporting on. The `_kindDriftGuard` below makes
+ *  this fail to compile if it ever drifts from the `commandVariants` union, so
+ *  the two stay in lockstep without duplicating the payload mapping. */
+export const DaemonCommandKind = S.Literal(
+  "connect",
+  "connect_device_code",
+  "cancel_connect",
+  "logout",
+  "cli_install",
+  "install_integration",
+  "uninstall_integration",
+  "submit_login_code",
+  "set_auto_update",
+  "refresh",
+  "status",
+  "update",
+);
+type TDaemonCommandKindLiteral = S.Schema.Type<typeof DaemonCommandKind>;
+// Bidirectional assignability assertion: the literal and the union's
+// discriminant must be the SAME set. Adding a kind to `commandVariants` without
+// adding it here (or vice-versa) breaks this line at compile time.
+type _AssertSameKinds = [TDaemonCommandKind] extends [TDaemonCommandKindLiteral]
+  ? [TDaemonCommandKindLiteral] extends [TDaemonCommandKind]
+    ? true
+    : never
+  : never;
+const _kindDriftGuard: _AssertSameKinds = true;
+void _kindDriftGuard;
+
 /** One control command delivered to the daemon over its relay socket.
  *  `id` is `daemon_commands.id` (bigserial), stringified for the wire. */
 export const DaemonCommand = S.Union(...commandVariants({ id: S.String }));

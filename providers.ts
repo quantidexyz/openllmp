@@ -360,8 +360,15 @@ export const GoogleImageRequest = S.Struct({
   ),
   generationConfig: S.Struct({
     response_modalities: S.Array(S.String),
-    sampleCount: S.optional(S.Number),
-    aspectRatio: S.optional(S.String),
+    // Gemini's generateContent nests aspect ratio under `imageConfig`;
+    // there is no `sampleCount` (it returns one image per call). Sending
+    // `sampleCount`/`aspectRatio` at the generationConfig top level 400s
+    // with "Unknown name ... at 'generation_config'".
+    imageConfig: S.optional(
+      S.Struct({
+        aspectRatio: S.optional(S.String),
+      }),
+    ),
   }),
 });
 export type TGoogleImageRequest = S.Schema.Type<typeof GoogleImageRequest>;

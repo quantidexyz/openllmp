@@ -72,22 +72,16 @@ export const ProviderUsageSnapshot = S.Union(
     note: S.String,
   }),
   /**
-   * No provider-side usage signal — fall back to OUR own request
-   * count for the current day. `gateway_calls_today` is computed
-   * from `public.requests`, scoped to the calling user + provider.
-   */
-  S.Struct({
-    kind: S.Literal("local"),
-    gateway_calls_today: S.Number,
-    note: S.String,
-  }),
-  /**
-   * Provider returned an error or doesn't surface anything usable.
-   * The UI shows the message; nothing else is rendered.
+   * Provider returned an error or doesn't surface anything usable — including
+   * a provider that exposes NO usage API to the CLI token at all (Grok: xAI
+   * forbids usage queries from the OAuth token). The UI shows `reason`, plus an
+   * optional `link` rendered as a button to the provider's own usage / billing
+   * page when the figures can only be checked there.
    */
   S.Struct({
     kind: S.Literal("unavailable"),
     reason: S.String,
+    link: S.optional(S.String),
   }),
 );
 export type TProviderUsageSnapshot = S.Schema.Type<

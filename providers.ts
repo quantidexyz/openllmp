@@ -448,6 +448,16 @@ export const ChatGptProviderOptions = S.Struct({
   sessionId: S.optional(S.String),
   originator: S.optional(S.String),
   userAgent: S.optional(S.String),
+  /**
+   * Inject the Codex system preamble (`CHATGPT_DEFAULT_INSTRUCTIONS`,
+   * "You are Codex…") into `instructions`. Required by the ChatGPT/Codex
+   * backend (gpt-5.x returns empty `output` without it) — but it's a Codex
+   * IDENTITY, so it must NOT be sent to other providers that merely share the
+   * Responses wire (xAI Grok). Defaults to TRUE when omitted, preserving the
+   * Codex behaviour for every existing caller; the daemon walker passes `false`
+   * for non-`chatgpt` Responses-wire providers.
+   */
+  codexInstructions: S.optional(S.Boolean),
 });
 export type TChatGptProviderOptions = S.Schema.Type<
   typeof ChatGptProviderOptions

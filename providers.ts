@@ -73,7 +73,12 @@ const AnthropicToolUseBlock = S.Struct({
 const AnthropicToolResultBlock = S.Struct({
   type: S.Literal("tool_result"),
   tool_use_id: S.String,
-  content: S.Union(S.String, S.Array(AnthropicTextBlock)),
+  // A tool_result may carry image blocks alongside text (e.g. a tool
+  // returning a screenshot) — a normal, documented Anthropic shape.
+  content: S.Union(
+    S.String,
+    S.Array(S.Union(AnthropicTextBlock, AnthropicImageBlock)),
+  ),
   is_error: S.optional(S.Boolean),
   cache_control: S.optional(S.NullOr(AnthropicCacheControl)),
 });
@@ -90,6 +95,38 @@ const AnthropicCompactionBlock = S.Struct({
   content: S.optional(S.Unknown),
 });
 
+// ── Assistant-history block types the gateway itself emits ──────────────────
+// Clients (e.g. Claude Code) replay the previous assistant turn verbatim as
+// history on the next request, so every block type we (or native Anthropic
+// passthrough) put in a response must also decode on the way back in —
+// otherwise the routing-time parse 400s the gateway's own output (#181).
+
+/** Native server-side tool call — spliced into responses by
+ * `buildAnthropicWebSearchBlocks` and returned by Anthropic passthrough. */
+const AnthropicServerToolUseBlock = S.Struct({
+  type: S.Literal("server_tool_use"),
+  id: S.String,
+  name: S.String,
+  input: S.Unknown,
+  cache_control: S.optional(S.NullOr(AnthropicCacheControl)),
+});
+
+/** Result of a native server-side web search. `content` is the result
+ * array or a `web_search_tool_result_error` object — kept opaque: the
+ * gateway never re-parses it downstream. */
+const AnthropicWebSearchToolResultBlock = S.Struct({
+  type: S.Literal("web_search_tool_result"),
+  tool_use_id: S.String,
+  content: S.Unknown,
+  cache_control: S.optional(S.NullOr(AnthropicCacheControl)),
+});
+
+/** Encrypted thinking returned by native Anthropic passthrough. */
+const AnthropicRedactedThinkingBlock = S.Struct({
+  type: S.Literal("redacted_thinking"),
+  data: S.String,
+});
+
 export const AnthropicContentBlock = S.Union(
   AnthropicTextBlock,
   AnthropicImageBlock,
@@ -97,6 +134,9 @@ export const AnthropicContentBlock = S.Union(
   AnthropicToolResultBlock,
   AnthropicThinkingBlock,
   AnthropicCompactionBlock,
+  AnthropicServerToolUseBlock,
+  AnthropicWebSearchToolResultBlock,
+  AnthropicRedactedThinkingBlock,
 );
 export type TAnthropicContentBlock = S.Schema.Type<
   typeof AnthropicContentBlock

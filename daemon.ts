@@ -43,6 +43,17 @@ export const DaemonBootstrap = S.Struct({
    * See `packages/daemon/src/self-update.ts`.
    */
   latest_version: S.optional(S.NullOr(S.String)),
+  /**
+   * The `openllmc` CLI version the cloud currently publishes (bare semver, no
+   * leading `v`). The daemon converges the INSTALLED CLI binary at
+   * `~/.openllm/bin/openllmc` to it on the same auto-update tick (and under
+   * the same opt-out toggle) as its own self-update — one flow, one toggle.
+   * The daemon never installs the CLI: an absent binary is skipped. Null/
+   * absent when no CLI release is published yet (or the cloud is too old to
+   * advertise it) — the daemon then never touches the CLI.
+   * See `packages/daemon/src/cli-self-update.ts`.
+   */
+  latest_cli_version: S.optional(S.NullOr(S.String)),
 });
 export type TDaemonBootstrap = S.Schema.Type<typeof DaemonBootstrap>;
 

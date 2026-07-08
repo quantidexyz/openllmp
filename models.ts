@@ -126,10 +126,15 @@ export type TAliasMap = S.Schema.Type<typeof AliasMap>;
 // minimal — only what upstreams actually report. Everything else
 // (capabilities, tier chains, pricing, limits) stays catalog-owned and
 // is hybrid-merged at read time (docs/proposals/live-provider-model-catalog.md).
+// String/array bounds are defense-in-depth on the authenticated write
+// paths (`POST /api/daemon/models`, the cloud refresher) so a
+// misbehaving upstream or client can't bloat `model_cache` payloads:
+// id cap matches the proxy's `MAX_MODEL_ID_LENGTH` (128); the largest
+// real list observed is OpenAI's at ~122 entries.
 export const ProviderModelEntry = S.Struct({
   /** Upstream model id, e.g. `gpt-5.2` — NOT the catalog `provider/model` id. */
-  provider_model_id: S.String,
-  display_name: S.optional(S.String),
+  provider_model_id: S.String.pipe(S.minLength(1), S.maxLength(128)),
+  display_name: S.optional(S.String.pipe(S.maxLength(256))),
   created: S.optional(S.Number),
   context_window: S.optional(S.Number),
 });
@@ -138,5 +143,7 @@ export type TProviderModelEntry = S.Schema.Type<typeof ProviderModelEntry>;
 // Payload of one `model_cache` row: the live model list one writer
 // (daemon for subscription providers, cloud for API-key providers)
 // observed for a single provider.
-export const ProviderModelList = S.Array(ProviderModelEntry);
+export const ProviderModelList = S.Array(ProviderModelEntry).pipe(
+  S.maxItems(1000),
+);
 export type TProviderModelList = S.Schema.Type<typeof ProviderModelList>;

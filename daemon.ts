@@ -1,6 +1,6 @@
 import { Schema as S } from "effect";
 import { FallbackGroup, ModelFallbackBinding } from "./config";
-import { ProviderModelEntry } from "./models";
+import { ProviderModelList } from "./models";
 import { ProviderUsageSnapshot } from "./provider-usage";
 import { RequestStatus } from "./stats";
 
@@ -102,15 +102,19 @@ export type TDaemonRecordRequest = S.Schema.Type<typeof DaemonRecordRequest>;
 // `provider` to the subscription set so a daemon can never overwrite the
 // cloud-owned API-key rows.
 export const DaemonModelReportEntry = S.Struct({
-  provider: S.String,
-  models: S.Array(ProviderModelEntry),
+  provider: S.String.pipe(S.maxLength(64)),
+  // Same per-list bound as `ProviderModelList` (defense-in-depth on
+  // this authenticated write path).
+  models: ProviderModelList,
 });
 export type TDaemonModelReportEntry = S.Schema.Type<
   typeof DaemonModelReportEntry
 >;
 
 export const DaemonModelReport = S.Struct({
-  entries: S.Array(DaemonModelReportEntry),
+  // One entry per subscription provider — the closed set is 4 slugs;
+  // 32 leaves headroom without allowing a bloated report.
+  entries: S.Array(DaemonModelReportEntry).pipe(S.maxItems(32)),
 });
 export type TDaemonModelReport = S.Schema.Type<typeof DaemonModelReport>;
 

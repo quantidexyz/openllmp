@@ -66,6 +66,69 @@ export const relayNamesFor = (target: TRelayDatabaseTarget): TRelayNames => ({
   relayName: `daemon-relay-${target}`,
 });
 
+// ─── Sandbox origin tags (deprovisioning) ─────────────────────────────
+//
+// The provisioner tags each relay sandbox with the stable ORIGIN that uses it
+// — the deployment "place" (production URL / preview branch URL / local
+// hostname) — plus a freshness timestamp, refreshed on healthy channel
+// fetches. The cleanup cron groups boxes by origin and gracefully stops a
+// superseded box (same origin, older freshness, different bundle hash) —
+// see `lib/relay-sandbox-cleanup.ts`.
+
+/** Tag key: the sanitized stable origin that provisioned/uses this box. */
+export const RELAY_TAG_ORIGIN = "origin";
+/** Tag key: unix-ms (decimal string) of the origin's last claim/refresh. */
+export const RELAY_TAG_ORIGIN_AT = "origin-at";
+
+/** The env signals the origin is derived from. `localHostname` is caller-
+ *  provided (`os.hostname()`) so this stays pure and testable. */
+export type TRelayOriginInputs = {
+  readonly vercelEnv: string | undefined;
+  readonly projectProductionUrl: string | undefined;
+  readonly branchUrl: string | undefined;
+  readonly deploymentUrl: string | undefined;
+  readonly localHostname: string | undefined;
+};
+
+/** Sandbox tag values must be short, plain tokens. Lowercase, strip the
+ *  protocol + trailing slash, squash anything outside [a-z0-9._-], cap at 64.
+ *  Returns null when nothing usable remains so the caller can fall back. */
+const sanitizeOriginTag = (raw: string | undefined): string | null => {
+  if (raw === undefined) return null;
+  const cleaned = raw
+    .toLowerCase()
+    .replace(/^https?:\/\//, "")
+    .replace(/\/+$/, "")
+    .replace(/[^a-z0-9._-]/g, "-")
+    .slice(0, 64);
+  return cleaned === "" ? null : cleaned;
+};
+
+/**
+ * The STABLE origin identity for sandbox tagging — stable across deploys of
+ * the same "place", so the cleanup cron's per-origin change detection fires:
+ *   production → the project production URL (not the per-deploy VERCEL_URL);
+ *   preview    → the branch URL (stable per git branch), falling back to the
+ *                per-deploy URL only when the branch URL is absent;
+ *   local/test → `local-<hostname>` so two developers never supersede each
+ *                other's boxes.
+ * Pure (a function of its inputs) per the convention above.
+ */
+export const resolveRelayOrigin = (inputs: TRelayOriginInputs): string => {
+  if (inputs.vercelEnv === "production") {
+    return sanitizeOriginTag(inputs.projectProductionUrl) ?? "production";
+  }
+  if (inputs.vercelEnv === "preview") {
+    return (
+      sanitizeOriginTag(inputs.branchUrl) ??
+      sanitizeOriginTag(inputs.deploymentUrl) ??
+      "preview"
+    );
+  }
+  const host = sanitizeOriginTag(inputs.localHostname);
+  return host === null ? "local" : `local-${host}`;
+};
+
 /**
  * The decoded claims of a connect ticket. The cloud (`/api/daemon/channel`)
  * mints these after validating the caller (`sk-llm` key → `daemon`, Neon

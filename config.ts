@@ -103,6 +103,14 @@ export const ExtraConfig = S.Struct({
    * daemon isn't connected). Set on connect; never auto-removed.
    */
   subscription_providers: S.optional(S.Array(S.String)),
+  /**
+   * Default tier aliases (`ultra` / `plus` / `lite`) the user explicitly
+   * DELETED from the chains editor. Derivation of virtual default chains
+   * skips these — without the marker, a deleted derived chain would
+   * silently reappear on the next load. Removing the marker (re-adding
+   * the alias via the editor) reverts it to auto-derived.
+   */
+  disabled_default_aliases: S.optional(S.Array(S.String)),
 });
 export type TExtraConfig = S.Schema.Type<typeof ExtraConfig>;
 

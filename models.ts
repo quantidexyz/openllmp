@@ -14,6 +14,17 @@ export const ModelCapability = S.Literal(
 );
 export type TModelCapability = S.Schema.Type<typeof ModelCapability>;
 
+// Built-in default-chain tiers. When a user has no fallback group with
+// one of these names, the gateway derives a virtual chain from catalog
+// entries flagged `default_tiers`, filtered to the user's available
+// providers — configuration that works out of the gate with no
+// onboarding step. Ordered best → cheapest; pickers prefer earlier
+// entries.
+export const DEFAULT_TIER_ALIASES = ["ultra", "plus", "lite"] as const;
+
+export const DefaultTier = S.Literal(...DEFAULT_TIER_ALIASES);
+export type TDefaultTier = S.Schema.Type<typeof DefaultTier>;
+
 export const ModelCard = S.Struct({
   id: S.String,
   object: S.Literal("model"),
@@ -94,6 +105,16 @@ export const ExtendedModel = S.Struct({
   deprecated: S.optional(S.Boolean),
   // Embedding-only metadata — see ExtendedModelCard for semantics.
   dimension_presets: S.optional(S.Array(S.Number)),
+  // Membership in derived default chains (`DEFAULT_TIER_ALIASES`).
+  // Chat models only. A model can belong to several tiers (e.g. a
+  // single-model subscription serving all three); the ARRAY ORDER is
+  // its priority — index 0 is its primary tier, and within each chain
+  // a model with the tier at a later index sorts after models that
+  // hold it earlier. `tier_rank` breaks ties within the same index
+  // across providers (lower = tried first) — explicit so quality
+  // ordering is deliberate, not an accident of catalog array order.
+  default_tiers: S.optional(S.Array(DefaultTier)),
+  tier_rank: S.optional(S.Number),
 });
 export type TExtendedModel = S.Schema.Type<typeof ExtendedModel>;
 

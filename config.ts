@@ -1,5 +1,5 @@
 import { Schema as S } from "effect";
-import { ExtendedModel } from "./models";
+import { DefaultTier, ExtendedModel } from "./models";
 
 /**
  * Wire format a custom-API endpoint speaks. Reuses the same two
@@ -110,7 +110,7 @@ export const ExtraConfig = S.Struct({
    * silently reappear on the next load. Removing the marker (re-adding
    * the alias via the editor) reverts it to auto-derived.
    */
-  disabled_default_aliases: S.optional(S.Array(S.String)),
+  disabled_default_aliases: S.optional(S.Array(DefaultTier)),
 });
 export type TExtraConfig = S.Schema.Type<typeof ExtraConfig>;
 

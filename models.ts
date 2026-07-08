@@ -120,3 +120,23 @@ export type TExtendedModel = S.Schema.Type<typeof ExtendedModel>;
 
 export const AliasMap = S.Record({ key: S.String, value: S.String });
 export type TAliasMap = S.Schema.Type<typeof AliasMap>;
+
+// One model as reported by a provider's own list endpoint (e.g. OpenAI
+// `GET /v1/models`, Moonshot `GET /coding/v1/models`). Deliberately
+// minimal — only what upstreams actually report. Everything else
+// (capabilities, tier chains, pricing, limits) stays catalog-owned and
+// is hybrid-merged at read time (docs/proposals/live-provider-model-catalog.md).
+export const ProviderModelEntry = S.Struct({
+  /** Upstream model id, e.g. `gpt-5.2` — NOT the catalog `provider/model` id. */
+  provider_model_id: S.String,
+  display_name: S.optional(S.String),
+  created: S.optional(S.Number),
+  context_window: S.optional(S.Number),
+});
+export type TProviderModelEntry = S.Schema.Type<typeof ProviderModelEntry>;
+
+// Payload of one `model_cache` row: the live model list one writer
+// (daemon for subscription providers, cloud for API-key providers)
+// observed for a single provider.
+export const ProviderModelList = S.Array(ProviderModelEntry);
+export type TProviderModelList = S.Schema.Type<typeof ProviderModelList>;

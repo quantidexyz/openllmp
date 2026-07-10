@@ -109,6 +109,20 @@ export const GroupedRequest = S.Struct({
   tokens_in: S.Number,
   tokens_out: S.Number,
   total_tokens: S.Number,
+  /**
+   * What this group actually cost on metered API billing — the summed
+   * `requests.cost_usd`. Subscription groups log cost 0, so this is 0
+   * for them; their price story lives in `api_equivalent_cost_usd`.
+   */
+  cost_usd: S.Number,
+  /**
+   * What this group's usage would cost at metered API pricing — set only
+   * for subscription-provider groups (which log `cost_usd = 0`), re-priced
+   * from the static catalog via `priceSubscriptionUsage` (same calculator
+   * as the overview savings bar, cache-read/cache-write split included).
+   * `null` for metered groups, whose real cost already lives in `cost_usd`.
+   */
+  api_equivalent_cost_usd: S.NullOr(S.Number),
   first_timestamp: S.String,
   last_timestamp: S.String,
 });

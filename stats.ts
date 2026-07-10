@@ -53,6 +53,39 @@ export const DailyBucket = S.Struct({
 });
 export type TDailyBucket = S.Schema.Type<typeof DailyBucket>;
 
+/**
+ * All-device subscription usage INFERRED from the vendor quota meter, per
+ * provider — the calibration estimator's output (docs/proposals/
+ * inferred-subscription-usage-calibration.md). Every dollar figure is a
+ * LOWER bound by construction (censored one-sided estimator), so the UI
+ * may present them as "≥ $X"; `tightness` near 1 means the estimate has
+ * converged and can read as "≈".
+ */
+export const InferredProviderUsage = S.Struct({
+  provider: S.String,
+  /** API-eq value of 30-day usage the gateway never saw (other devices /
+   *  raw CLI / vendor apps). Lower bound. */
+  off_gateway_usd: S.Number,
+  /** The in-progress window's figures, when a calibrated series has a
+   *  current reading — drives the providers-page headroom line. */
+  current_window: S.NullOr(
+    S.Struct({
+      window_label: S.String,
+      percent_used: S.Number,
+      used_usd: S.Number,
+      headroom_usd: S.Number,
+      bracket_usd: S.Number,
+    }),
+  ),
+  /** Valid calibration pairs behind K̂ — 0 pairs never reaches here. */
+  pair_count: S.Number,
+  /** 0–1; ≥ ~0.8 reads as converged ("≈" instead of "≥"). */
+  tightness: S.Number,
+});
+export type TInferredProviderUsage = S.Schema.Type<
+  typeof InferredProviderUsage
+>;
+
 export const UserStats = S.Struct({
   total_requests: S.Number,
   total_tokens_in: S.Number,
@@ -62,11 +95,20 @@ export const UserStats = S.Struct({
    * What the same window's usage would have cost at pure metered API
    * pricing: non-subscription rows contribute their real `cost_usd`;
    * subscription rows (which log cost 0) are re-priced from the static
-   * catalog pricing at API-equivalent per-token rates. Drives the
-   * overview savings bar (`total_api_equivalent_cost_usd -
-   * total_cost_usd` = what OpenLLM subscription routing saved).
+   * catalog pricing at API-equivalent per-token rates — PLUS the inferred
+   * off-gateway subscription usage below (usage on other devices moves the
+   * same quota meter the plan fee bought). Drives the overview savings bar
+   * (`total_api_equivalent_cost_usd - total_cost_usd` = what the
+   * subscriptions saved).
    */
   total_api_equivalent_cost_usd: S.Number,
+  /**
+   * Per-provider inferred all-device usage (absent providers had no
+   * calibrated meter series — their contribution is 0, the pre-inference
+   * behaviour). The sum of `off_gateway_usd` here is exactly the inferred
+   * term inside `total_api_equivalent_cost_usd`.
+   */
+  inferred_subscription_usage: S.optional(S.Array(InferredProviderUsage)),
   by_model: S.Array(ModelBreakdown),
   daily: S.Array(DailyBucket),
 });

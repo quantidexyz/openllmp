@@ -1,6 +1,6 @@
 {
   "name": "@quantidexyz/openllmp",
-  "version": "0.0.0",
+  "version": "1.6.17-rc.2",
   "private": false,
   "type": "module",
   "exports": {

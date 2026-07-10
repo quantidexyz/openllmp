@@ -14,8 +14,17 @@ export const RequestRow = S.Struct({
   key_id: S.String,
   model: S.String,
   provider: S.String,
+  /** Canonical prompt tokens — INCLUDES the two cache columns below. */
   tokens_in: S.Number,
   tokens_out: S.Number,
+  /**
+   * Cache split of `tokens_in`. Kept so a row can be re-priced at the cache
+   * rates (`cache_read_per_million` / `cache_write_per_million`) rather than
+   * the full input rate — see `priceSubscriptionUsage` in `handlers/stats.ts`.
+   * Rows written before these columns existed carry 0.
+   */
+  cached_tokens: S.Number,
+  cache_creation_tokens: S.Number,
   cost_usd: S.Number,
   latency_ms: S.Number,
   status: RequestStatus,

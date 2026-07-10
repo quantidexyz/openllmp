@@ -82,8 +82,14 @@ export const DaemonRecordRequest = S.Struct({
   model: S.String,
   provider: S.String,
   status: RequestStatus,
+  /** Canonical prompt tokens — INCLUDES the two cache fields below. */
   tokens_in: S.Number,
   tokens_out: S.Number,
+  // The cache split of `tokens_in`. Optional so a daemon built before this
+  // field existed still records (its rows just price as all-fresh input, the
+  // prior behaviour). Still no `cost_usd`: the cloud prices these tokens.
+  cached_tokens: S.optional(S.Number),
+  cache_creation_tokens: S.optional(S.Number),
   latency_ms: S.Number,
   idempotency_key: S.optional(S.NullOr(S.String)),
   error: S.optional(S.NullOr(S.String)),

@@ -383,6 +383,16 @@ export const DaemonProviderConnection = S.Struct({
    *  the daemon and pushed with its status. Absent when not connected or the
    *  read failed. */
   usage: S.optional(S.NullOr(ProviderUsageSnapshot)),
+  /** Obscured vendor-account identity for a CONNECTED provider:
+   *  sha256("openllm-account-v1:<provider>:<stable-account-id>") over the
+   *  stable account id the vendor CLI stores locally (Anthropic's
+   *  accountUuid, ChatGPT's account_id, Kimi's user_id, Grok's user_id).
+   *  Lets the cloud key usage-meter series per ACCOUNT — two devices on the
+   *  same account share the hash; a second account on the same provider gets
+   *  its own — without ever shipping the raw vendor id off-box. Absent when
+   *  not connected or unreadable, and on daemons predating it. See
+   *  docs/proposals/inferred-subscription-usage-calibration.md §10. */
+  account_hash: S.optional(S.String),
 });
 export type TDaemonProviderConnection = S.Schema.Type<
   typeof DaemonProviderConnection

@@ -131,6 +131,10 @@ export const ResponsesRequest = S.Struct({
   // Tolerated + ignored (Codex sets these); kept off the canonical mapping.
   store: S.optional(S.NullishOr(S.Boolean)),
   previous_response_id: S.optional(S.NullishOr(S.String)),
+  // Codex sends this per conversation (stable across turns) to route prompt-cache
+  // hits — preserve it so the daemon's re-encoded upstream keeps the same key
+  // rather than dropping it. See `fromResponsesRequest` / `toChatGptRequest`.
+  prompt_cache_key: S.optional(S.NullishOr(S.String)),
 });
 export type TResponsesRequest = S.Schema.Type<typeof ResponsesRequest>;
 

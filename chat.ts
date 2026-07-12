@@ -189,6 +189,16 @@ export const ChatCompletionRequest = S.Struct({
     S.Literal("minimal", "low", "medium", "high", "xhigh", "max", "none"),
   ),
   metadata: S.optional(S.Record({ key: S.String, value: S.String })),
+  /**
+   * OpenAI prompt-cache routing hint. A stable value across the turns of one
+   * conversation routes them to the same cache machine, raising the cache-hit
+   * rate (and, for subscription providers like Codex, cutting quota burn). A
+   * real OpenAI field — forwarded verbatim to openai-family upstreams and
+   * emitted by `toChatGptRequest` for the chatgpt/Codex wire (synthesized from
+   * the conversation prefix when the caller doesn't supply one). Set by
+   * `fromResponsesRequest` when a Codex client already carries it.
+   */
+  prompt_cache_key: S.optional(S.String),
 });
 export type TChatCompletionRequest = S.Schema.Type<
   typeof ChatCompletionRequest

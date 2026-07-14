@@ -1,32 +1,48 @@
 import { Schema as S } from "effect";
 
 /**
- * Uniform usage snapshot returned by `POST /api/providers/{slug}/usage`.
+ * Uniform usage snapshot — THE canonical struct every provider's usage
+ * read reduces into, at the daemon delegation boundary.
  *
- * Each OAuth-backed provider reports usage in a wildly different shape:
+ * Each OAuth-backed provider reports usage in a wildly different shape,
+ * and vendors RESHAPE those payloads without notice (OpenAI has already
+ * collapsed Codex's 5h-primary + weekly-secondary pair into a single
+ * weekly primary window mid-flight):
  *
- *   - Anthropic Pro/Max ("claude_code") exposes `anthropic-ratelimit-
- *     unified-*` response headers on every `/v1/messages` call (and on
- *     `count_tokens`, which is free) — a percent-remaining + reset
- *     timestamp for the rolling 5h window.
- *   - ChatGPT Codex ("chatgpt") exposes a `backend-api/me` endpoint
- *     with subscription plan + entitlements; no per-window quota.
- *   - Kimi Code has NO documented per-user quota endpoint, so we fall
- *     back to a count of THIS gateway's own calls (from
- *     `public.requests`) for the current day.
+ *   - Anthropic Pro/Max ("claude_code"): OAuth usage endpoint with
+ *     `utilization` + `resets_at` per rolling window (5h, 7d, and
+ *     model-scoped 7d windows).
+ *   - ChatGPT Codex ("chatgpt"): `backend-api/wham/usage` with
+ *     `used_percent` + `limit_window_seconds` + `reset_at` windows under
+ *     `rate_limit`.
+ *   - Kimi Code: `{ usage, limits[] }` rows; Grok: a monthly quota.
  *
- * Rather than push that variance into the client, the server
- * normalises every provider into this discriminated union. The UI
- * branches on `kind` and renders accordingly.
+ * Rather than push that variance into the client, each delegate reduces
+ * its vendor payload into this ONE discriminated union as early as
+ * possible — everything downstream (relay persistence, the calibration
+ * estimator, the UI) only ever sees this shape, so a vendor-side change
+ * is absorbed entirely inside that provider's reducer.
  */
-/** One quota window — Claude has 5h + 7d; Codex has primary + secondary. */
+/** One quota window — e.g. Claude's 5h + 7d, Codex's weekly. */
 export const ProviderUsageWindow = S.Struct({
-  /** Human-readable window label — "5-hour", "7-day", "Sonnet 7-day", etc. */
+  /**
+   * Human-readable window label — "5-hour", "7-day", "Sonnet 7-day", etc.
+   * Doubles as the window's IDENTITY downstream (the calibration series
+   * key), so reducers derive it from the window's DURATION whenever the
+   * vendor states one — vendor-positional names ("Primary") survive a
+   * reshape with a different meaning; a duration label re-keys instead.
+   */
   label: S.String,
   /** 0–100 used percentage in this window. */
   percent_used: S.Number,
   /** Unix epoch milliseconds when this window resets, when known. */
   reset_at_ms: S.NullOr(S.Number),
+  /**
+   * Window length in milliseconds, when the vendor states one (e.g.
+   * Codex's `limit_window_seconds`, Claude's key-implied 5h/7d). Absent
+   * when the vendor only names the window.
+   */
+  window_ms: S.optional(S.Number),
 });
 export type TProviderUsageWindow = S.Schema.Type<typeof ProviderUsageWindow>;
 
@@ -64,7 +80,8 @@ export const ProviderUsageSnapshot = S.Union(
   }),
   /**
    * Subscription plan / entitlements snapshot. No live quota number;
-   * just "you're on plan X". Use for ChatGPT.
+   * just "you're on plan X" — for a provider whose usage endpoint
+   * exposes no per-window quota.
    */
   S.Struct({
     kind: S.Literal("plan"),

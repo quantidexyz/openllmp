@@ -71,6 +71,30 @@ export const InferredWindowUsage = S.Struct({
 export type TInferredWindowUsage = S.Schema.Type<typeof InferredWindowUsage>;
 
 /**
+ * THE uniform usage index — every provider reduces to this one monthly
+ * (trailing 30-day) dollar reading, no matter how the vendor meters
+ * (Claude's 5h/7d, Codex's weekly, Kimi's daily, Grok's monthly):
+ *
+ *   - `used_usd`     — API-eq value of the account's metered usage over
+ *                      the stats month, all devices. Lower bound.
+ *   - `bracket_usd`  — the subscription's monthly capacity at API-eq
+ *                      rates: one full window's value amortized to 30
+ *                      days (bracket × 30d/window-length). Lower bound.
+ *   - `headroom_usd` — max(0, bracket − used).
+ *
+ * Being duration-normalized, the index is immune to vendor window
+ * reshapes: when a window changes, only the calibration behind it resets
+ * (the index disappears until the new window pairs, then catches up) —
+ * its MEANING never changes.
+ */
+export const InferredMonthlyIndex = S.Struct({
+  used_usd: S.Number,
+  headroom_usd: S.Number,
+  bracket_usd: S.Number,
+});
+export type TInferredMonthlyIndex = S.Schema.Type<typeof InferredMonthlyIndex>;
+
+/**
  * One vendor ACCOUNT's inferred figures — the per-account detail behind a
  * provider's rollup when several accounts are calibrated at once (two
  * machines on two logins). Note an account's figures are ACCOUNT-level:
@@ -84,6 +108,10 @@ export const InferredAccountUsage = S.Struct({
   account_hash: S.NullOr(S.String),
   off_gateway_usd: S.Number,
   current_window: S.NullOr(InferredWindowUsage),
+  /** The uniform monthly reading for this account. NULL until a LIVE
+   *  window series is calibrated (cold start / just after a vendor
+   *  window reshape). */
+  monthly_index: S.NullOr(InferredMonthlyIndex),
   pair_count: S.Number,
   tightness: S.Number,
 });
@@ -100,6 +128,11 @@ export const InferredProviderUsage = S.Struct({
    *  several accounts are calibrated (each has its own in-progress window;
    *  read `accounts` instead). */
   current_window: S.NullOr(InferredWindowUsage),
+  /** The uniform monthly reading — dollar integrals sum soundly, so with
+   *  several accounts this is the SUM of their indexes (unlike
+   *  `current_window`, which goes null). NULL when no account has a live
+   *  calibrated series yet. */
+  monthly_index: S.NullOr(InferredMonthlyIndex),
   /** Valid calibration pairs behind K̂ — 0 pairs never reaches here. With
    *  several accounts: the SUM across accounts (evidence volume). */
   pair_count: S.Number,

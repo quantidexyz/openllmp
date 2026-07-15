@@ -96,6 +96,11 @@ export const ServerSearchCall = S.Struct({
   query: S.String,
   /** Fan-out queries when the provider reports them (Codex `action.queries`). */
   queries: S.optional(S.Array(S.String)),
+  /** Source links when the provider reports them (grok `action.sources`) —
+   *  re-encoded as the search block's result items so clients get real URLs. */
+  results: S.optional(
+    S.Array(S.Struct({ url: S.String, title: S.optional(S.String) })),
+  ),
 });
 export type TServerSearchCall = S.Schema.Type<typeof ServerSearchCall>;
 

@@ -1,6 +1,6 @@
 {
   "name": "@openllmsh/protocol",
-  "version": "0.0.0",
+  "version": "1.6.37",
   "private": false,
   "type": "module",
   "exports": {

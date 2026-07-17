@@ -62,9 +62,18 @@ export const validateRegistryRawUrl = (
     throw new Error("registry URL contains forbidden authority or suffix data");
   }
 
-  const segments = url.pathname.split("/").filter(Boolean);
-  if (segments.length !== 6) throw new Error("registry URL path is invalid");
-  const [owner, repo, commit, area, slug, filename] = segments;
+  // Exact canonical layout: a leading empty segment then six non-empty parts.
+  // No filter(Boolean) — duplicate or trailing slashes must be rejected, not
+  // silently collapsed into a passing shape.
+  const rawSegments = url.pathname.split("/");
+  if (
+    rawSegments.length !== 7 ||
+    rawSegments[0] !== "" ||
+    rawSegments.slice(1).some((segment) => segment === "")
+  ) {
+    throw new Error("registry URL path is invalid");
+  }
+  const [owner, repo, commit, area, slug, filename] = rawSegments.slice(1);
   if (`${owner}/${repo}` !== REGISTRY_REPOSITORY) {
     throw new Error("registry URL repository is not approved");
   }

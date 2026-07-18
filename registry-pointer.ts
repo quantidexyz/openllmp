@@ -8,6 +8,21 @@
 export const REGISTRY_REPOSITORY = "openllmsh/registry";
 export const SHA256_RE = /^[0-9a-f]{64}$/;
 export const FULL_COMMIT_SHA_RE = /^[0-9a-f]{40}$/;
+const INSTALL_STAMP_RE = /^# openllm-self-sha256: ([0-9a-f]{64})$/gm;
+
+/** Read the one canonical install-stamp identity embedded in an assembled script. */
+export const readRegistryInstallStampSha256 = (
+  bytes: Uint8Array,
+): string | null => {
+  let script: string;
+  try {
+    script = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  } catch {
+    return null;
+  }
+  const matches = [...script.matchAll(INSTALL_STAMP_RE)];
+  return matches.length === 1 ? matches[0][1] : null;
+};
 
 export type TRegistryPointerFilename = "install.sh" | "pointer.json";
 

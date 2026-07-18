@@ -234,6 +234,10 @@ const IntegrationPayload = S.Struct({
   kind: DaemonIntegrationKind,
   slug: ArtifactSlug,
   target: S.optional(ArtifactSlug),
+  /** Which base URL the install bakes (`--gateway`): the local daemon
+   *  (`local`, the default) or the cloud origin. Only meaningful on
+   *  `install_integration` for setups declaring `gateway_modes`. */
+  gateway: S.optional(S.Literal("local", "cloud")),
 });
 /** A remote-Claude headless-login code submission: the X25519-sealed OAuth
  *  authorization code the user pasted from the hosted callback page. Opened on
@@ -246,11 +250,6 @@ const SubmitLoginCodePayload = S.Struct({
   sealed: Base64Blob,
 });
 const SetAutoUpdatePayload = S.Struct({ enabled: S.Boolean });
-/** Toggle the daemon's local-first gateway mode (`OPENLLM_LOCAL_GATEWAY` in
- *  `~/.openllm/.env`, default ON): serve direct client requests via the
- *  signed-plan flow instead of pure passthrough. See
- *  `docs/proposals/local-first-gateway.md` §3. */
-const SetLocalGatewayPayload = S.Struct({ enabled: S.Boolean });
 /** `refresh` scoped to one provider's usage cache; bare `{}` clears all. */
 const RefreshPayload = S.Struct({
   slug: S.optional(SubscriptionProviderSlug),
@@ -318,11 +317,6 @@ const commandVariants = <F extends S.Struct.Fields>(addressing: F) =>
     }),
     S.Struct({
       ...addressing,
-      kind: S.Literal("set_local_gateway"),
-      payload: SetLocalGatewayPayload,
-    }),
-    S.Struct({
-      ...addressing,
       kind: S.Literal("refresh"),
       payload: S.optional(RefreshPayload),
     }),
@@ -361,7 +355,6 @@ export const DaemonCommandKind = S.Literal(
   "uninstall_integration",
   "submit_login_code",
   "set_auto_update",
-  "set_local_gateway",
   "refresh",
   "status",
   "update",
@@ -477,6 +470,11 @@ export const DaemonInstalledIntegration = S.Struct({
   /** Installed catalog version reported by the `-s` probe (absent when the
    *  script can't determine one). Display-only. */
   version: S.optional(S.String),
+  /** The gateway mode this item was installed with (`--gateway` stamp):
+   *  which base URL the setup baked. Absent on stamps predating the field
+   *  and on setups that bake no base URL. Drives the dashboard's
+   *  "reinstall required" prompt when the desired mode differs. */
+  gateway: S.optional(S.Literal("local", "cloud")),
   /** The registry artifact commit the installed script came from (absent on
    *  pre-stamp installs). Display-only — links the device's version. */
   installed_commit: S.optional(S.String),
@@ -500,13 +498,6 @@ export const DaemonStatus = S.Struct({
    *  Absent on daemons too old to report it — those always self-updated, so the
    *  switch then reads as on. See `packages/daemon/src/auto-update-pref.ts`. */
   auto_update: S.optional(S.Boolean),
-  /** Whether local-first gateway mode is enabled (`OPENLLM_LOCAL_GATEWAY`,
-   *  OPT-OUT, default on): direct client requests (base URL = the daemon)
-   *  are served via the signed-plan flow; off = pure passthrough to the
-   *  origin. Toggled via the `set_local_gateway` command; absent on daemons
-   *  too old to report it (those have no local-first path — the switch then
-   *  hides). See `docs/proposals/local-first-gateway.md`. */
-  local_gateway: S.optional(S.Boolean),
   /** Result of the last bootstrap — see `DaemonCloudState`. */
   cloud_state: DaemonCloudState,
   /** This daemon's X25519 public key (SPKI DER, base64). Lets ANOTHER of the

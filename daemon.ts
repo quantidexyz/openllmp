@@ -466,6 +466,9 @@ export const DaemonInstalledIntegration = S.Struct({
   /** Installed catalog version reported by the `-s` probe (absent when the
    *  script can't determine one). Display-only. */
   version: S.optional(S.String),
+  /** The registry artifact commit the installed script came from (absent on
+   *  pre-stamp installs). Display-only — links the device's version. */
+  installed_commit: S.optional(S.String),
   /** Installed but the managed config no longer matches what the CURRENT
    *  bundle would write (version drift or manual edits). Only meaningful when
    *  `installed` is true; absent = unknown/converged (old daemons and scripts

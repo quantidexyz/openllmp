@@ -463,6 +463,9 @@ export const DaemonInstalledIntegration = S.Struct({
   /** Client target for an extension; plain setups omit it. */
   target: S.optional(S.String),
   installed: S.Boolean,
+  /** Installed catalog version reported by the `-s` probe (absent when the
+   *  script can't determine one). Display-only. */
+  version: S.optional(S.String),
   /** Installed but the managed config no longer matches what the CURRENT
    *  bundle would write (version drift or manual edits). Only meaningful when
    *  `installed` is true; absent = unknown/converged (old daemons and scripts

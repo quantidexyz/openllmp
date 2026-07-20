@@ -349,6 +349,16 @@ const commandVariants = <F extends S.Struct.Fields>(addressing: F) =>
       kind: S.Literal("update"),
       payload: S.optional(EmptyPayload),
     }),
+    // Drop every cached signed plan tuple NOW. The dashboard enqueues this
+    // after a successful chain/config save so the very next request bounces
+    // through the cloud and picks up the new chain instead of replaying the
+    // old one for up to the cache TTL (the "app feels unresponsive to chain
+    // reorders" friction). Payload-less and idempotent.
+    S.Struct({
+      ...addressing,
+      kind: S.Literal("bust_plan_cache"),
+      payload: S.optional(EmptyPayload),
+    }),
   ] as const;
 
 /** The bare `{ kind, payload }` vocabulary — what an enqueue boundary (the
@@ -377,6 +387,7 @@ export const DaemonCommandKind = S.Literal(
   "refresh",
   "status",
   "update",
+  "bust_plan_cache",
 );
 type TDaemonCommandKindLiteral = S.Schema.Type<typeof DaemonCommandKind>;
 // Bidirectional assignability assertion: the literal and the union's

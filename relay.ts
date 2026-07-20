@@ -414,9 +414,10 @@ export type TRelayTunnelCloseFrame = S.Schema.Type<
 // owns detached-session reaping). See
 // `docs/features/sub-tunnel-and-chat-sessions.md` §2.2.
 
-/** How long a daemon keeps a DETACHED (no consumer) live PTY before
- *  killing it. Attached sessions never idle out. */
+/** @deprecated Reaping now uses activity-based quiet time. */
 export const SESSION_DETACHED_TTL_MS = 30 * 60_000;
+/** Detached PTYs reap only after this long without output or busy activity. */
+export const SESSION_QUIET_REAP_MS = 30 * 60_000;
 
 /** watcher → relay → daemon. Open a device session on the daemon serving
  *  `key_id`. `mode`: `spawn` = fresh CLI in a new workspace; `attach` =
@@ -431,6 +432,7 @@ export const RelaySessionOpenFrame = S.Struct({
   cols: S.Number,
   rows: S.Number,
   mode: S.Literal("spawn", "attach", "continue"),
+  title: S.optional(S.String.pipe(S.maxLength(80))),
 });
 export type TRelaySessionOpenFrame = S.Schema.Type<
   typeof RelaySessionOpenFrame

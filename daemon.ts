@@ -544,6 +544,8 @@ export const DaemonStatus = S.Struct({
    *  best-effort). Absent on daemons too old to report it; the dashboard then
    *  offers both Install + Uninstall (idempotent). */
   integrations: S.optional(S.Array(DaemonInstalledIntegration)),
+  /** Advertised transport capabilities, retained in fleet status telemetry. */
+  caps: S.optional(S.Array(S.String)),
   /** Whether this daemon can host device chat sessions (PTY — POSIX only;
    *  false on win32). Absent on daemons too old to report it — the
    *  dashboard then hides the device variant for this box. */
@@ -562,6 +564,10 @@ export const DaemonStatus = S.Struct({
         attached: S.Boolean,
         /** The PTY is still running (attach re-binds; false → continue). */
         live: S.Boolean,
+        /** Best-effort process-tree activity signal for dormant sessions. */
+        busy: S.optional(S.Boolean),
+        /** User-visible session label, bounded for presence snapshots. */
+        title: S.optional(S.String.pipe(S.maxLength(80))),
       }),
     ),
   ),

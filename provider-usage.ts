@@ -49,10 +49,11 @@ export type TProviderUsageWindow = S.Schema.Type<typeof ProviderUsageWindow>;
 export const ProviderUsageSnapshot = S.Union(
   /**
    * One or more quota windows + an overall status. Claude's
-   * `claude.ai/api/organizations/{id}/usage` returns five_hour +
-   * seven_day + optional Sonnet/Opus-scoped 7-day windows; Codex's
-   * `chatgpt.com/backend-api/wham/usage` returns primary_window +
-   * secondary_window. Both flatten into this list.
+   * shared plan meters (`five_hour` + `seven_day`) and Codex's
+   * `rate_limit` windows both flatten into this list. Model-scoped
+   * Claude caps (Fable / Opus / Sonnet) and Codex promo pools (Spark)
+   * ride on `extra_pools` instead — they meter different usage and
+   * must not drive status or the tightest-window face.
    */
   S.Struct({
     kind: S.Literal("quota"),
